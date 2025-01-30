@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangman Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Creepster', cursive;
+            background-color: #fff;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        .container {
+            display: flex;
+            width: 70%;
+            max-width: 900px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        .left {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .left img {
+            width: 250px;
+        }
+        .right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+        }
+        .word {
+            font-size: 2rem;
+            letter-spacing: 12px;
+            margin: 20px 0;
+            background: #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .hint {
+            font-size: 1.2rem;
+            color: #d35400;
+            padding: 10px;
+            background: #ffd280;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .lives {
+            font-size: 1.4rem;
+            color: red;
+            margin-top: 10px;
+        }
+        .sound-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #444;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .sound-button.active {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left">
+            <img id="hangman-gif" src="/static/5_lives.gif" alt="Hangman Stage">
+        </div>
+        <div class="right">
+            <div class="word" id="word">_ _ _ _</div>
+            <div class="hint" id="hint">Hint: It is an animal.</div>
+            <div class="lives" id="lives">Lives left: 5</div>
+        </div>
+    </div>
+
+    <!-- Sound Toggle Button -->
+    <button id="sound-btn" class="sound-button">🔊 Sound ON</button>
+
+    <!-- Background Music -->
+    <audio id="bg-music" loop>
+        <source src="/static/no_sup.mp3" type="audio/mpeg">
+        Your browser does not support the audio tag.
+    </audio>
+
+    <script>
+        let lives = 5;
+        let word = "";
+        let guessedWord = [];
+        let audio = document.getElementById('bg-music');
+        let soundBtn = document.getElementById('sound-btn');
+
+        // Fetch random word & hint
+        // Fetch random word & hint
+async function fetchWord() {
+    try {
+        const response = await fetch('/get_word');
+        const data = await response.json();
+        word = data.word.toUpperCase();
+        guessedWord = Array(word.length).fill('_');
+        document.getElementById('word').textContent = guessedWord.join(' ');
+        document.getElementById('hint').textContent = `Hint: ${data.hint}`;
+    } catch (error) {
+        console.error('Error fetching word:', error);
+        document.getElementById('word').textContent = "Error";
+        document.getElementById('hint').textContent = "Could not load word.";
+    }
+}
+
+
+        // Update game state when a letter is pressed
+        function updateGame(key) {
+            if (lives > 0 && guessedWord.includes('_')) {
+                const letter = key.toUpperCase();
+
+                if (word.includes(letter)) {
+                    for (let i = 0; i < word.length; i++) {
+                        if (word[i] === letter) {
+                            guessedWord[i] = letter;
+                        }
+                    }
+                } else {
+                    lives--;
+                }
+
+                document.getElementById('word').textContent = guessedWord.join(' ');
+                document.getElementById('lives').textContent = `Lives left: ${lives}`;
+                document.getElementById('hangman-gif').src = `/static/${lives > 0 ? lives + '_lives' : 'dead'}.gif`;
+            }
+
+            if (!guessedWord.includes('_')) {
+                alert('You won!');
+            } else if (lives === 0) {
+                alert(`Game Over! The word was: ${word}`);
+            }
+        }
+
+        // Key press listener
+        document.addEventListener('keydown', (event) => {
+            const key = event.key;
+            if (/^[a-zA-Z]$/.test(key)) {
+                updateGame(key);
+            }
+        });
+
+        // Toggle Sound
+        soundBtn.addEventListener('click', () => {
+            if (audio.paused) {
+                audio.play();
+                soundBtn.textContent = '🔊 Sound ON';
+                soundBtn.classList.add('active');
+            } else {
+                audio.pause();
+                soundBtn.textContent = '🔇 Sound OFF';
+                soundBtn.classList.remove('active');
+            }
+        });
+
+        // Auto-play when the page loads
+        window.onload = () => {
+            fetchWord();
+            audio.play().catch(() => {
+                console.log("User interaction needed to start audio");
+            });
+        };
+    </script>
+</body>
+</html>
